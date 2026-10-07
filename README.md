@@ -1,10 +1,10 @@
 # Flowbook
 
-**FR** — Playbooks YAML versionnés de parcours métier (auth, paiement, accès premium), pas des dumps E2E fragiles.
+**FR** — Playbooks YAML versionnés de parcours métier (auth, paiement, accès premium), pas des dumps E2E fragiles. Steps `http`, `assert`, et désormais `browser` (Playwright).
 
-**EN** — Versioned YAML playbooks of business journeys for web apps (auth + payment MVP), not fragile E2E dumps.
+**EN** — Versioned YAML playbooks of business journeys for web apps (auth + payment MVP), not fragile E2E dumps. Step types: `http`, `assert`, and `browser` (Playwright).
 
-MVP focus: **signup → email verify → Stripe test checkout → assert premium access**.
+MVP focus: **signup → email verify → Stripe test checkout → assert premium access** (API *or* UI).
 
 Repo: [WhoIsLoH/flowbook](https://github.com/WhoIsLoH/flowbook)
 
@@ -13,8 +13,9 @@ Repo: [WhoIsLoH/flowbook](https://github.com/WhoIsLoH/flowbook)
 ## Quick start
 
 ```bash
-# install CLI deps
+# install CLI deps (+ Playwright)
 npm install
+npx playwright install chromium   # once, for browser steps
 
 # install + start the demo app (port 3847)
 npm install --prefix examples/demo-app
@@ -27,8 +28,14 @@ In another terminal:
 # validate playbook shape
 npm run flowbook -- validate playbooks/auth-signup-checkout.yaml
 
-# run the journey against the local demo
+# run the HTTP journey against the local demo
 npm run flowbook -- run playbooks/auth-signup-checkout.yaml
+
+# run the browser (UI) journey headless
+npm run flowbook -- run playbooks/auth-signup-checkout-browser.yaml
+
+# watch the browser (headed)
+FLOWBOOK_HEADED=1 npm run flowbook -- run playbooks/auth-signup-checkout-browser.yaml
 ```
 
 Or via the bin after `npm link` / `npx`:
@@ -89,14 +96,55 @@ steps:
 - `${var}` — from playbook `vars`, prior `capture`s, or environment
 - `${VAR:-default}` — env / var with default
 - Built-ins: `${TIMESTAMP}`, `${UUID}`
-- Capture paths: `$.field` / `$.a.b[0]` (simple JSONPath)
+- Capture paths (HTTP): `$.field` / `$.a.b[0]` (simple JSONPath)
 
 ### Step types
 
 | Type | Role |
 |------|------|
 | `http` | Request (`method`, `path`, optional `headers` / `body` / `expect.status` / `capture`) |
-| `assert` | Check `expect.status` / `expect.json` / `expect.equals` against last response (or nested `http:`) |
+| `assert` | Check `expect.status` / `expect.json` / `expect.equals` against last response (or nested `http:`), or `expect.vars` against captured playbook vars |
+| `browser` | Drive a Chromium UI with Playwright (`actions`: `goto` / `fill` / `click` / `waitFor` / `capture`) |
+
+---
+
+## Browser step
+
+**FR** — Un step `browser` lance Chromium (headless par défaut) et enchaîne des actions UI. Utile pour les parcours où l’API seule ne suffit pas.
+
+**EN** — A `browser` step launches Chromium (headless by default) and runs a sequence of UI actions.
+
+```yaml
+- id: ui-journey
+  type: browser
+  # headed: true          # optional; or FLOWBOOK_HEADED=1 / top-level playbook headed: true
+  actions:
+    - goto: /                    # relative to baseUrl, or absolute URL
+    - fill:
+        selector: '#email'
+        value: ${email}
+    - click: '#signup-btn'       # or { selector: '#signup-btn' }
+    - waitFor: '#verify-token'   # selector string
+    - waitFor: { url: '**/account' }
+    - capture:
+        verifyToken:
+          selector: '#verify-token'
+          attr: data-verify-token   # or omit for textContent; value: true for inputs
+        plan:
+          selector: '#account-plan'
+          regex: '(premium|free)'   # optional extract from text
+          group: 1
+```
+
+| Action | Fields |
+|--------|--------|
+| `goto` | URL path or absolute URL |
+| `fill` | `selector`, `value` (interpolated) |
+| `click` | selector string or `{ selector }` |
+| `waitFor` | selector string, `{ selector }`, or `{ url }` (Playwright URL pattern) |
+| `capture` | map of var → `{ selector, attr?, value?, regex?, group? }` or shorthand selector string |
+
+Browser contexts are reused across consecutive `browser` steps in one run, then closed.
 
 ---
 
@@ -108,11 +156,15 @@ flowbook/
   src/runner.js           # sequential runner + report
   src/steps/http.js
   src/steps/assert.js
+  src/steps/browser.js    # Playwright UI steps
   playbooks/auth-signup-checkout.yaml
-  examples/demo-app/      # Express stub on :3847
+  playbooks/auth-signup-checkout-browser.yaml
+  examples/demo-app/      # Express stub on :3847 (API + HTML UI)
 ```
 
-## Demo app endpoints
+## Demo app
+
+### JSON API
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -120,6 +172,18 @@ flowbook/
 | POST | `/verify` | `{token}` → verified |
 | POST | `/checkout` | Bearer auth → mock Stripe → `plan: premium` |
 | GET | `/me` | Bearer auth → `{email, verified, plan}` |
+
+### HTML UI (same in-memory store)
+
+| Path | Description |
+|------|-------------|
+| `GET /` | Signup form |
+| `POST /ui/signup` | Creates user, shows verify token |
+| `GET /verify` | Token form |
+| `POST /ui/verify` | Verifies → redirect `/checkout` |
+| `GET /checkout` | Mock pay button (session cookie) |
+| `POST /ui/checkout` | Sets `plan: premium` → `/account` |
+| `GET /account` | Shows email / verified / plan |
 
 In-memory only — no database, no real Stripe keys.
 

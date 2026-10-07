@@ -1,0 +1,46 @@
+name: auth-signup-checkout-browser
+description: Browser UI journey — signup → verify → mock checkout → assert premium plan
+baseUrl: ${BASE_URL:-http://127.0.0.1:3847}
+# headed: true   # or set FLOWBOOK_HEADED=1
+vars:
+  email: browser+${TIMESTAMP}@example.com
+  password: secret123
+steps:
+  - id: ui-journey
+    type: browser
+    actions:
+      - goto: /
+      - fill:
+          selector: '#email'
+          value: ${email}
+      - fill:
+          selector: '#password'
+          value: ${password}
+      - click: '#signup-btn'
+      - waitFor: '#verify-token'
+      - capture:
+          verifyToken:
+            selector: '#verify-token'
+            attr: data-verify-token
+      - goto: /verify
+      - fill:
+          selector: '#token'
+          value: ${verifyToken}
+      - click: '#verify-btn'
+      - waitFor:
+          url: '**/checkout'
+      - waitFor: '#checkout-btn'
+      - click: '#checkout-btn'
+      - waitFor:
+          url: '**/account'
+      - waitFor: '#account-plan'
+      - capture:
+          plan:
+            selector: '#account-plan'
+            attr: data-plan
+
+  - id: assert-premium-plan
+    type: assert
+    expect:
+      vars:
+        plan: premium

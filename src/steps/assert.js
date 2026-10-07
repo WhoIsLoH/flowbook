@@ -1,10 +1,11 @@
 import { runHttpStep } from './http.js';
 
 /**
- * Assert step: optionally run an inline HTTP request, then check expect.status / expect.json.
+ * Assert step: optionally run an inline HTTP request, then check
+ * expect.status / expect.json / expect.equals against lastResponse,
+ * and/or expect.vars against playbook vars (e.g. browser captures).
  */
 export async function runAssertStep(step, ctx, interpolate, getJsonPath) {
-  // If nested http config is present, fire it first (and reuse lastResponse)
   if (step.http) {
     const httpStep = {
       id: `${step.id}:http`,
@@ -24,69 +25,99 @@ export async function runAssertStep(step, ctx, interpolate, getJsonPath) {
         captures: httpResult.captures || {},
       };
     }
-    // Merge any prelude captures
     for (const [k, v] of Object.entries(httpResult.captures || {})) {
       ctx.vars[k] = v;
     }
   }
 
   const expect = step.expect || {};
-  const last = ctx.lastResponse;
-  if (!last) {
+  const details = [];
+  const hasVars = expect.vars && typeof expect.vars === 'object';
+  const hasHttpExpect =
+    expect.status != null ||
+    (expect.json && typeof expect.json === 'object') ||
+    expect.equals !== undefined;
+
+  if (!hasVars && !hasHttpExpect) {
     return {
       ok: false,
       detail: 'assert',
-      error: 'no previous HTTP response to assert against',
+      error: 'assert expect needs status, json, equals, and/or vars',
       captures: {},
     };
   }
 
-  const details = [];
+  if (hasVars) {
+    const wanted = interpolate(expect.vars, ctx);
+    for (const [key, want] of Object.entries(wanted)) {
+      const got = ctx.vars[key];
+      if (!deepEqual(got, want)) {
+        return {
+          ok: false,
+          detail: details.join(', ') || 'vars',
+          error: `expected var ${key}=${JSON.stringify(want)}, got ${JSON.stringify(got)}`,
+          captures: {},
+        };
+      }
+      details.push(`vars.${key}=${JSON.stringify(want)}`);
+    }
+  }
 
-  if (expect.status != null) {
-    const want = Number(interpolate(expect.status, ctx));
-    if (last.status !== want) {
+  if (hasHttpExpect) {
+    const last = ctx.lastResponse;
+    if (!last) {
       return {
         ok: false,
-        detail: `status ${last.status}`,
-        error: `expected status ${want}, got ${last.status}`,
+        detail: details.join(', ') || 'assert',
+        error: 'no previous HTTP response to assert against',
         captures: {},
       };
     }
-    details.push(`status=${want}`);
-  }
 
-  if (expect.json && typeof expect.json === 'object') {
-    const expected = interpolate(expect.json, ctx);
-    for (const [key, want] of Object.entries(expected)) {
-      // Support either plain key (top-level field) or $.path
-      const path = key.startsWith('$.') ? key : `$.${key}`;
+    if (expect.status != null) {
+      const want = Number(interpolate(expect.status, ctx));
+      if (last.status !== want) {
+        return {
+          ok: false,
+          detail: `status ${last.status}`,
+          error: `expected status ${want}, got ${last.status}`,
+          captures: {},
+        };
+      }
+      details.push(`status=${want}`);
+    }
+
+    if (expect.json && typeof expect.json === 'object') {
+      const expected = interpolate(expect.json, ctx);
+      for (const [key, want] of Object.entries(expected)) {
+        const path = key.startsWith('$.') ? key : `$.${key}`;
+        const got = getJsonPath(last.json, path);
+        if (!deepEqual(got, want)) {
+          return {
+            ok: false,
+            detail: details.join(', ') || 'json',
+            error: `expected ${path}=${JSON.stringify(want)}, got ${JSON.stringify(got)}`,
+            captures: {},
+          };
+        }
+        details.push(`${path}=${JSON.stringify(want)}`);
+      }
+    }
+
+    if (expect.equals !== undefined) {
+      const want = interpolate(expect.equals, ctx);
+      const path = expect.path ? String(interpolate(expect.path, ctx)) : '$';
       const got = getJsonPath(last.json, path);
       if (!deepEqual(got, want)) {
         return {
           ok: false,
-          detail: details.join(', ') || 'json',
+          detail: details.join(', ') || 'equals',
           error: `expected ${path}=${JSON.stringify(want)}, got ${JSON.stringify(got)}`,
           captures: {},
         };
       }
-      details.push(`${path}=${JSON.stringify(want)}`);
+      details.push(`${path} equals`);
     }
-  }
-
-  if (expect.equals !== undefined) {
-    const want = interpolate(expect.equals, ctx);
-    const path = expect.path ? String(interpolate(expect.path, ctx)) : '$';
-    const got = getJsonPath(last.json, path);
-    if (!deepEqual(got, want)) {
-      return {
-        ok: false,
-        detail: details.join(', ') || 'equals',
-        error: `expected ${path}=${JSON.stringify(want)}, got ${JSON.stringify(got)}`,
-        captures: {},
-      };
-    }
-    details.push(`${path} equals`);
   }
 
   return {

@@ -9,9 +9,18 @@
   "scripts": {
     "demo": "node examples/demo-app/server.js",
     "flowbook": "node src/cli.js",
-    "validate": "node src/cli.js validate playbooks/auth-signup-checkout.yaml"
+    "validate": "node src/cli.js validate playbooks/auth-signup-checkout.yaml",
+    "validate:browser": "node src/cli.js validate playbooks/auth-signup-checkout-browser.yaml",
+    "flowbook:http": "node src/cli.js run playbooks/auth-signup-checkout.yaml",
+    "flowbook:browser": "node src/cli.js run playbooks/auth-signup-checkout-browser.yaml"
   },
-  "keywords": ["playbook", "e2e", "business-flow", "yaml", "testing"],
+  "keywords": [
+    "playbook",
+    "e2e",
+    "business-flow",
+    "yaml",
+    "testing"
+  ],
   "author": "WhoIsLoH",
   "license": "MIT",
   "engines": {
@@ -19,6 +28,7 @@
   },
   "dependencies": {
     "commander": "^12.1.0",
+    "playwright": "^1.63.0",
     "undici": "^6.21.0",
     "yaml": "^2.6.1"
   }

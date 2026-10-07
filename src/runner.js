@@ -1,10 +1,13 @@
 import { runHttpStep } from './steps/http.js';
 import { runAssertStep } from './steps/assert.js';
+import { runBrowserStep, closeBrowser } from './steps/browser.js';
 
 const BUILTINS = {
   TIMESTAMP: () => String(Date.now()),
   UUID: () => crypto.randomUUID(),
 };
+
+const KNOWN_TYPES = ['http', 'assert', 'browser'];
 
 /**
  * Validate a parsed playbook document. Returns an array of issue strings.
@@ -27,7 +30,7 @@ export function validatePlaybook(doc) {
       }
       if (!step.id) issues.push(`steps[${i}] missing id`);
       if (!step.type) issues.push(`steps[${i}] (id=${step.id || '?'}) missing type`);
-      else if (!['http', 'assert'].includes(step.type)) {
+      else if (!KNOWN_TYPES.includes(step.type)) {
         issues.push(`steps[${i}] (id=${step.id}) unknown type: ${step.type}`);
       }
       if (step.type === 'http') {
@@ -36,6 +39,11 @@ export function validatePlaybook(doc) {
       }
       if (step.type === 'assert' && !step.expect) {
         issues.push(`steps[${i}] (id=${step.id}) assert missing expect`);
+      }
+      if (step.type === 'browser') {
+        if (!Array.isArray(step.actions) || step.actions.length === 0) {
+          issues.push(`steps[${i}] (id=${step.id}) browser missing non-empty actions`);
+        }
       }
     });
   }
@@ -124,50 +132,64 @@ export async function runPlaybook(doc, options = {}) {
     seedCtx.vars[k] = vars[k];
   }
 
-  const ctx = { vars, baseUrl, lastResponse: null };
+  const ctx = {
+    vars,
+    baseUrl,
+    lastResponse: null,
+    playbookHeaded: doc.headed === true,
+    browser: null,
+    context: null,
+    page: null,
+  };
   const stepResults = [];
   let passed = 0;
 
-  for (const step of doc.steps) {
-    const started = Date.now();
-    const entry = {
-      id: step.id,
-      type: step.type,
-      ok: false,
-      durationMs: 0,
-      detail: '',
-      error: null,
-      captures: {},
-    };
+  try {
+    for (const step of doc.steps) {
+      const started = Date.now();
+      const entry = {
+        id: step.id,
+        type: step.type,
+        ok: false,
+        durationMs: 0,
+        detail: '',
+        error: null,
+        captures: {},
+      };
 
-    try {
-      let outcome;
-      if (step.type === 'http') {
-        outcome = await runHttpStep(step, ctx, interpolate, getJsonPath);
-      } else if (step.type === 'assert') {
-        outcome = await runAssertStep(step, ctx, interpolate, getJsonPath);
-      } else {
-        throw new Error(`Unknown step type: ${step.type}`);
+      try {
+        let outcome;
+        if (step.type === 'http') {
+          outcome = await runHttpStep(step, ctx, interpolate, getJsonPath);
+        } else if (step.type === 'assert') {
+          outcome = await runAssertStep(step, ctx, interpolate, getJsonPath);
+        } else if (step.type === 'browser') {
+          outcome = await runBrowserStep(step, ctx, interpolate);
+        } else {
+          throw new Error(`Unknown step type: ${step.type}`);
+        }
+
+        entry.ok = outcome.ok;
+        entry.detail = outcome.detail || '';
+        entry.captures = outcome.captures || {};
+        entry.error = outcome.error || null;
+
+        // Merge captures into vars
+        for (const [k, v] of Object.entries(entry.captures)) {
+          ctx.vars[k] = v;
+        }
+      } catch (err) {
+        entry.ok = false;
+        entry.error = err.message;
       }
 
-      entry.ok = outcome.ok;
-      entry.detail = outcome.detail || '';
-      entry.captures = outcome.captures || {};
-      entry.error = outcome.error || null;
-
-      // Merge captures into vars
-      for (const [k, v] of Object.entries(entry.captures)) {
-        ctx.vars[k] = v;
-      }
-    } catch (err) {
-      entry.ok = false;
-      entry.error = err.message;
+      entry.durationMs = Date.now() - started;
+      stepResults.push(entry);
+      if (entry.ok) passed += 1;
+      else break; // fail-fast
     }
-
-    entry.durationMs = Date.now() - started;
-    stepResults.push(entry);
-    if (entry.ok) passed += 1;
-    else break; // fail-fast
+  } finally {
+    await closeBrowser(ctx);
   }
 
   return {
