@@ -1,30 +1,52 @@
 {
-  "name": "flowbook",
+  "name": "flowbook-cli",
   "version": "0.1.0",
-  "description": "Versioned business-flow playbooks for web apps",
+  "description": "Versioned business-flow playbooks for web apps (HTTP + Playwright browser steps)",
   "type": "module",
   "bin": {
     "flowbook": "./src/cli.js"
   },
+  "files": [
+    "src",
+    "playbooks",
+    "examples/demo-app/server.js",
+    "examples/demo-app/package.json",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
     "demo": "node examples/demo-app/server.js",
     "flowbook": "node src/cli.js",
     "validate": "node src/cli.js validate playbooks/auth-signup-checkout.yaml",
     "validate:browser": "node src/cli.js validate playbooks/auth-signup-checkout-browser.yaml",
     "flowbook:http": "node src/cli.js run playbooks/auth-signup-checkout.yaml",
-    "flowbook:browser": "node src/cli.js run playbooks/auth-signup-checkout-browser.yaml"
+    "flowbook:browser": "node src/cli.js run playbooks/auth-signup-checkout-browser.yaml",
+    "prepublishOnly": "npm run validate && npm run validate:browser",
+    "pack:check": "npm pack --dry-run"
   },
   "keywords": [
     "playbook",
     "e2e",
     "business-flow",
     "yaml",
-    "testing"
+    "testing",
+    "playwright",
+    "cli",
+    "http",
+    "flowbook"
   ],
   "author": "WhoIsLoH",
   "license": "MIT",
   "engines": {
     "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WhoIsLoH/flowbook.git"
+  },
+  "homepage": "https://github.com/WhoIsLoH/flowbook#readme",
+  "bugs": {
+    "url": "https://github.com/WhoIsLoH/flowbook/issues"
   },
   "dependencies": {
     "commander": "^12.1.0",

@@ -10,10 +10,33 @@ Repo: [WhoIsLoH/flowbook](https://github.com/WhoIsLoH/flowbook)
 
 ---
 
-## Quick start
+## Install / npx
+
+Published package name: **`flowbook-cli`** (the short name `flowbook` is already taken on npm by an unrelated project; `@whoisloh/flowbook` is also free if you prefer a scoped name later).
 
 ```bash
-# install CLI deps (+ Playwright)
+# one-shot (no global install)
+npx flowbook-cli validate path/to/playbook.yaml
+npx flowbook-cli run path/to/playbook.yaml
+
+# or install globally / as a dep — the binary is still named `flowbook`
+npm install -g flowbook-cli
+flowbook validate path/to/playbook.yaml
+flowbook run path/to/playbook.yaml
+```
+
+**Browser steps:** Playwright does **not** download Chromium on install (too heavy for a postinstall). After install, run once:
+
+```bash
+npx playwright install chromium
+```
+
+---
+
+## Quick start (from this repo)
+
+```bash
+# install CLI deps
 npm install
 npx playwright install chromium   # once, for browser steps
 
@@ -26,30 +49,25 @@ In another terminal:
 
 ```bash
 # validate playbook shape
-npm run flowbook -- validate playbooks/auth-signup-checkout.yaml
+npm run validate
+# or: npx flowbook validate playbooks/auth-signup-checkout.yaml
 
 # run the HTTP journey against the local demo
-npm run flowbook -- run playbooks/auth-signup-checkout.yaml
+npm run flowbook:http
 
 # run the browser (UI) journey headless
-npm run flowbook -- run playbooks/auth-signup-checkout-browser.yaml
+npm run flowbook:browser
 
 # watch the browser (headed)
-FLOWBOOK_HEADED=1 npm run flowbook -- run playbooks/auth-signup-checkout-browser.yaml
-```
-
-Or via the bin after `npm link` / `npx`:
-
-```bash
-npx flowbook run playbooks/auth-signup-checkout.yaml
+FLOWBOOK_HEADED=1 npm run flowbook:browser
 ```
 
 Override the target:
 
 ```bash
-BASE_URL=http://127.0.0.1:3847 npm run flowbook -- run playbooks/auth-signup-checkout.yaml
+BASE_URL=http://127.0.0.1:3847 npx flowbook run playbooks/auth-signup-checkout.yaml
 # or
-npm run flowbook -- run playbooks/auth-signup-checkout.yaml --base-url http://127.0.0.1:3847
+npx flowbook run playbooks/auth-signup-checkout.yaml --base-url http://127.0.0.1:3847
 ```
 
 ---
