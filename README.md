@@ -8,6 +8,8 @@ MVP focus: **signup → email verify → Stripe test checkout → assert premium
 
 Repo: [WhoIsLoH/flowbook](https://github.com/WhoIsLoH/flowbook)
 
+Site: [whoisloh.github.io/flowbook](https://whoisloh.github.io/flowbook/)
+
 ---
 
 ## Install / npx

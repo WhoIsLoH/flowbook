@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Flowbook — YAML business-flow playbooks</title>
+  <meta name="description" content="Flowbook: versioned YAML playbooks for business journeys (auth, payment, premium). HTTP + Playwright. npx flowbook-cli" />
+  <meta name="theme-color" content="#0b0d12" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;750&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%237c9cff'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-size='16' font-family='sans-serif' font-weight='800' fill='%230b0d12'%3EFb%3C/text%3E%3C/svg%3E" />
+</head>
+<body>
+  <div class="wrap">
+    <nav class="nav">
+      <a class="brand" href="./">
+        <span class="logo">Fb</span>
+        Flowbook
+      </a>
+      <div class="nav-links">
+        <a href="#demo">Demo</a>
+        <a href="#install">Install</a>
+        <a href="https://github.com/WhoIsLoH/flowbook" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.npmjs.com/package/flowbook-cli" target="_blank" rel="noopener">npm</a>
+      </div>
+    </nav>
+
+    <header class="hero">
+      <div>
+        <div class="eyebrow"><span class="dot"></span> CLI · YAML · HTTP + Playwright</div>
+        <h1>Business journeys as <em>versioned playbooks</em></h1>
+        <p class="pitch">
+          <span class="lang-tag">FR</span>
+          Playbooks YAML versionnés de parcours métier (auth, paiement, accès premium) — pas des dumps E2E fragiles.
+        </p>
+        <p class="pitch">
+          <span class="lang-tag">EN</span>
+          Versioned YAML playbooks of real product flows — <strong>signup → verify → checkout → assert premium</strong> — not brittle recorded E2E scripts.
+        </p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="#demo">Try the live demo</a>
+          <a class="btn btn-ghost" href="https://github.com/WhoIsLoH/flowbook" target="_blank" rel="noopener">View on GitHub</a>
+        </div>
+        <div class="install-box" id="install-snippet">
+          <code>npx flowbook-cli</code>
+          <button type="button" class="copy-btn" data-copy="npx flowbook-cli" aria-label="Copy">Copy</button>
+        </div>
+      </div>
+
+      <aside class="terminal" aria-label="Sample run report">
+        <div class="term-bar">
+          <span class="term-dot r"></span>
+          <span class="term-dot y"></span>
+          <span class="term-dot g"></span>
+          <span class="term-title">flowbook run auth-signup-checkout.yaml</span>
+        </div>
+        <div class="term-body">
+          <div class="hi">Flowbook: auth-signup-checkout</div>
+          <div class="dim">baseUrl:  http://127.0.0.1:3847</div>
+          <div class="dim">────────────────────────────────</div>
+          <div><span class="ok">✓</span> [signup] http <span class="dim">(42ms)</span></div>
+          <div class="dim">&nbsp;&nbsp;&nbsp;capture verifyToken="vt_…"</div>
+          <div><span class="ok">✓</span> [verify] http <span class="dim">(18ms)</span></div>
+          <div><span class="ok">✓</span> [checkout] http <span class="dim">(31ms)</span></div>
+          <div><span class="ok">✓</span> [assert-premium] assert <span class="dim">(12ms)</span></div>
+          <div class="dim">&nbsp;&nbsp;&nbsp;plan == premium</div>
+          <div class="dim">────────────────────────────────</div>
+          <div class="pass">PASS  4/4 steps</div>
+        </div>
+      </aside>
+    </header>
+
+    <section>
+      <h2 class="section-title">Three step types. One journey.</h2>
+      <p class="section-sub">Describe the business path once — run it against API or UI.</p>
+      <div class="grid-3">
+        <article class="card">
+          <span class="badge http">http</span>
+          <h3>API requests</h3>
+          <p>POST /signup, capture tokens, chain Bearer auth. Simple JSONPath captures (<code>$.field</code>).</p>
+        </article>
+        <article class="card">
+          <span class="badge assert">assert</span>
+          <h3>Business checks</h3>
+          <p>Expect status, JSON fields, or captured vars — assert the outcome that matters, not the DOM noise.</p>
+        </article>
+        <article class="card">
+          <span class="badge browser">browser</span>
+          <h3>Playwright UI</h3>
+          <p>goto / fill / click / waitFor / capture when the API alone isn’t enough. Headless by default.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="demo">
+      <h2 class="section-title">Interactive playground</h2>
+      <p class="section-sub">
+        See the playbook YAML and a recorded-looking step report. Client-side mock — no server required.
+        <a href="demo.html">Open full-page demo →</a>
+      </p>
+      <div class="demo-shell">
+        <div class="demo-pane">
+          <div class="pane-head">
+            <span>playbooks/auth-signup-checkout.yaml</span>
+          </div>
+          <div class="pane-body">
+            <pre class="yaml-view" id="yaml-view"></pre>
+          </div>
+        </div>
+        <div class="demo-pane">
+          <div class="pane-head">
+            <span>Run report</span>
+            <div class="demo-actions">
+              <button type="button" class="btn btn-ghost" id="btn-reset">Reset</button>
+              <button type="button" class="btn btn-primary" id="btn-run">▶ Run</button>
+            </div>
+          </div>
+          <div class="pane-body">
+            <div class="report" id="report"></div>
+            <div class="report-footer" id="report-footer">PASS  4/4 steps</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="install">
+      <h2 class="section-title">Install</h2>
+      <p class="section-sub">Package name <strong>flowbook-cli</strong> on npm — binary is still <code>flowbook</code>.</p>
+      <div class="cmd-block">
+        <pre><span class="comment"># one-shot</span>
+npx flowbook-cli validate path/to/playbook.yaml
+npx flowbook-cli run path/to/playbook.yaml
+
+<span class="comment"># or install</span>
+npm install -g flowbook-cli
+flowbook run playbooks/auth-signup-checkout.yaml
+
+<span class="comment"># browser steps need Chromium once</span>
+npx playwright install chromium</pre>
+      </div>
+      <div class="links-row">
+        <a href="https://github.com/WhoIsLoH/flowbook" target="_blank" rel="noopener">github.com/WhoIsLoH/flowbook</a>
+        <a href="https://www.npmjs.com/package/flowbook-cli" target="_blank" rel="noopener">npmjs.com/package/flowbook-cli</a>
+        <a href="https://github.com/WhoIsLoH/flowbook#readme" target="_blank" rel="noopener">Full README</a>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span>MIT · WhoIsLoH · Flowbook</span>
+      <span>
+        <a href="https://github.com/WhoIsLoH/flowbook">GitHub</a>
+        ·
+        <a href="https://www.npmjs.com/package/flowbook-cli">npm</a>
+      </span>
+    </footer>
+  </div>
+
+  <script src="demo.js"></script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Flowbook demo — playbook playground</title>
+  <meta name="description" content="Interactive Flowbook playbook demo: YAML journey + mock runner report" />
+  <meta name="theme-color" content="#0b0d12" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .demo-page-hero { padding: 1.5rem 0 1rem; }
+    .demo-page-hero h1 { font-size: clamp(1.6rem, 3vw, 2.1rem); margin-bottom: .5rem; }
+    .demo-shell { min-height: 520px; }
+    .explain {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: .75rem;
+      margin: 1.25rem 0 1.5rem;
+    }
+    @media (max-width: 760px) { .explain { grid-template-columns: 1fr; } }
+    .explain .card { padding: 1rem 1.1rem; }
+    .explain h3 { font-size: .92rem; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav class="nav">
+      <a class="brand" href="./">
+        <span class="logo">Fb</span>
+        Flowbook
+      </a>
+      <div class="nav-links">
+        <a href="./">← Landing</a>
+        <a href="https://github.com/WhoIsLoH/flowbook" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.npmjs.com/package/flowbook-cli" target="_blank" rel="noopener">npm</a>
+      </div>
+    </nav>
+
+    <div class="demo-page-hero">
+      <h1>Playground</h1>
+      <p class="pitch" style="margin:0">
+        <span class="lang-tag">EN</span> Client-side mock of <code>flowbook run</code> —
+        explains the YAML and animates a step report.<br />
+        <span class="lang-tag">FR</span> Simulation navigateur du runner — explique le YAML et anime le rapport d’étapes.
+      </p>
+    </div>
+
+    <div class="explain">
+      <article class="card">
+        <h3>1. Vars &amp; interpolation</h3>
+        <p><code>${TIMESTAMP}</code>, captures, and env defaults feed every step.</p>
+      </article>
+      <article class="card">
+        <h3>2. Chained HTTP</h3>
+        <p>Signup captures tokens → verify → checkout with Bearer auth.</p>
+      </article>
+      <article class="card">
+        <h3>3. Business assert</h3>
+        <p>Final check: <code>plan: premium</code> — the outcome that matters.</p>
+      </article>
+    </div>
+
+    <div class="demo-shell">
+      <div class="demo-pane">
+        <div class="pane-head">
+          <span>auth-signup-checkout.yaml</span>
+        </div>
+        <div class="pane-body">
+          <pre class="yaml-view" id="yaml-view"></pre>
+        </div>
+      </div>
+      <div class="demo-pane">
+        <div class="pane-head">
+          <span>flowbook run · mock report</span>
+          <div class="demo-actions">
+            <button type="button" class="btn btn-ghost" id="btn-reset">Reset</button>
+            <button type="button" class="btn btn-primary" id="btn-run">▶ Run</button>
+          </div>
+        </div>
+        <div class="pane-body">
+          <div class="report" id="report"></div>
+          <div class="report-footer" id="report-footer">PASS  4/4 steps</div>
+        </div>
+      </div>
+    </div>
+
+    <section id="install" style="padding-top:2rem">
+      <h2 class="section-title">Run it for real</h2>
+      <div class="cmd-block">
+        <pre>npx flowbook-cli validate playbooks/auth-signup-checkout.yaml
+npx flowbook-cli run playbooks/auth-signup-checkout.yaml</pre>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span>MIT · WhoIsLoH · Flowbook</span>
+      <a href="./">Back to landing</a>
+    </footer>
+  </div>
+  <script src="demo.js"></script>
+</body>
+</html>
