@@ -1,0 +1,25 @@
+{
+  "name": "flowbook",
+  "version": "0.1.0",
+  "description": "Versioned business-flow playbooks for web apps",
+  "type": "module",
+  "bin": {
+    "flowbook": "./src/cli.js"
+  },
+  "scripts": {
+    "demo": "node examples/demo-app/server.js",
+    "flowbook": "node src/cli.js",
+    "validate": "node src/cli.js validate playbooks/auth-signup-checkout.yaml"
+  },
+  "keywords": ["playbook", "e2e", "business-flow", "yaml", "testing"],
+  "author": "WhoIsLoH",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "undici": "^6.21.0",
+    "yaml": "^2.6.1"
+  }
+}

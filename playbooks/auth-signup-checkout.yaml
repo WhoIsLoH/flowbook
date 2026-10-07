@@ -1,0 +1,51 @@
+name: auth-signup-checkout
+description: Signup → email verify → mock Stripe checkout → assert premium access
+baseUrl: ${BASE_URL:-http://127.0.0.1:3847}
+vars:
+  email: demo+${TIMESTAMP}@example.com
+  password: secret123
+steps:
+  - id: signup
+    type: http
+    method: POST
+    path: /signup
+    body:
+      email: ${email}
+      password: ${password}
+    expect:
+      status: 201
+    capture:
+      verifyToken: $.verifyToken
+      sessionToken: $.sessionToken
+
+  - id: verify
+    type: http
+    method: POST
+    path: /verify
+    body:
+      token: ${verifyToken}
+    expect:
+      status: 200
+    capture:
+      sessionToken: $.sessionToken
+
+  - id: checkout
+    type: http
+    method: POST
+    path: /checkout
+    headers:
+      Authorization: Bearer ${sessionToken}
+    expect:
+      status: 200
+
+  - id: assert-premium
+    type: assert
+    http:
+      method: GET
+      path: /me
+      headers:
+        Authorization: Bearer ${sessionToken}
+    expect:
+      status: 200
+      json:
+        plan: premium
