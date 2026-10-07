@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install CLI dependencies
+        run: npm ci
+
+      - name: Install demo-app dependencies
+        run: npm ci --prefix examples/demo-app
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Validate playbooks
+        run: |
+          npm run validate
+          npm run validate:browser
+
+      - name: Start demo-app
+        run: |
+          npm run demo &
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:3847/health >/dev/null; then
+              echo "demo-app is up"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "demo-app failed to start" >&2
+          exit 1
+
+      - name: Run HTTP playbook
+        run: npm run flowbook:http
+        env:
+          BASE_URL: http://127.0.0.1:3847
+
+      - name: Run browser playbook
+        run: npm run flowbook:browser
+        env:
+          BASE_URL: http://127.0.0.1:3847
