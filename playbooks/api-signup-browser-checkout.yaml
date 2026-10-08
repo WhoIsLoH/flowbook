@@ -1,0 +1,58 @@
+name: api-signup-browser-checkout
+description: Sign up and verify over the API, then open checkout in the browser already logged in (session cookie)
+baseUrl: ${BASE_URL:-http://127.0.0.1:3847}
+vars:
+  email: api-browser+${TIMESTAMP}@example.com
+  password: secret123
+steps:
+  - id: signup
+    type: http
+    method: POST
+    path: /signup
+    body:
+      email: ${email}
+      password: ${password}
+    expect:
+      status: 201
+    capture:
+      verifyToken: $.verifyToken
+
+  - id: verify
+    type: http
+    method: POST
+    path: /verify
+    body:
+      token: ${verifyToken}
+    expect:
+      status: 200
+    capture:
+      sessionToken: $.sessionToken
+
+  - id: browser-checkout
+    type: browser
+    # Start the browser logged in with the token from the API, no UI login.
+    session:
+      cookies:
+        - name: session
+          value: ${sessionToken}
+          httpOnly: true
+          sameSite: Lax
+    actions:
+      - goto: /checkout
+      - waitFor: '#checkout-btn'
+      - capture:
+          checkoutEmail: '#checkout-email'
+      - click: '#checkout-btn'
+      - waitFor:
+          url: '**/account'
+      - capture:
+          plan:
+            selector: '#account-plan'
+            attr: data-plan
+
+  - id: assert-premium
+    type: assert
+    expect:
+      vars:
+        checkoutEmail: ${email}
+        plan: premium

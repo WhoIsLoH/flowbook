@@ -1,0 +1,57 @@
+name: api-signup-browser-headers
+description: Same journey, but the browser authenticates with an Authorization header and gets a localStorage value
+baseUrl: ${BASE_URL:-http://127.0.0.1:3847}
+vars:
+  email: api-headers+${TIMESTAMP}@example.com
+  password: secret123
+steps:
+  - id: signup
+    type: http
+    method: POST
+    path: /signup
+    body:
+      email: ${email}
+      password: ${password}
+    expect:
+      status: 201
+    capture:
+      verifyToken: $.verifyToken
+
+  - id: verify
+    type: http
+    method: POST
+    path: /verify
+    body:
+      token: ${verifyToken}
+    expect:
+      status: 200
+    capture:
+      sessionToken: $.sessionToken
+
+  - id: browser-checkout
+    type: browser
+    session:
+      # Only sent to requests on the baseUrl origin.
+      headers:
+        Authorization: Bearer ${sessionToken}
+      # Written for the baseUrl origin before the page scripts run.
+      localStorage:
+        demo_note: hello ${email}
+    actions:
+      - goto: /checkout
+      - waitFor: '#checkout-btn'
+      - click: '#checkout-btn'
+      - waitFor:
+          url: '**/account'
+      - capture:
+          plan:
+            selector: '#account-plan'
+            attr: data-plan
+          note: '#account-note'
+
+  - id: assert-premium
+    type: assert
+    expect:
+      vars:
+        plan: premium
+        note: hello ${email}

@@ -2,6 +2,7 @@
  * Minimal Express stub for Flowbook MVP playbooks.
  * Journeys: signup → verify → checkout (mock Stripe) → /me plan=premium
  * Also serves a tiny HTML UI at /, /verify, /checkout, /account for browser steps.
+ * UI pages accept the `session` cookie or `Authorization: Bearer <sessionToken>`.
  */
 import express from 'express';
 import { randomBytes, createHash } from 'node:crypto';
@@ -184,7 +185,7 @@ app.post('/ui/verify', (req, res) => {
 });
 
 app.get('/checkout', (req, res) => {
-  const email = sessionEmailFromCookie(req);
+  const email = uiSessionEmail(req);
   if (!email) {
     return res.status(401).type('html').send(
       layout('Checkout', `<div class="msg err" id="error">Please sign up first.</div><p><a href="/">Signup</a></p>`),
@@ -210,7 +211,7 @@ app.get('/checkout', (req, res) => {
 });
 
 app.post('/ui/checkout', (req, res) => {
-  const email = sessionEmailFromCookie(req);
+  const email = uiSessionEmail(req);
   if (!email) {
     return res.status(401).type('html').send(
       layout('Checkout error', `<div class="msg err" id="error">unauthorized</div>`),
@@ -233,7 +234,7 @@ app.post('/ui/checkout', (req, res) => {
 });
 
 app.get('/account', (req, res) => {
-  const email = sessionEmailFromCookie(req);
+  const email = uiSessionEmail(req);
   if (!email) {
     return res.status(401).type('html').send(
       layout('Account', `<div class="msg err" id="error">Please sign up first.</div><p><a href="/">Signup</a></p>`),
@@ -255,10 +256,17 @@ app.get('/account', (req, res) => {
   <p>Verified: <span id="account-verified">${user.verified ? 'yes' : 'no'}</span></p>
   <p>Plan: <span id="account-plan" data-plan="${escapeHtml(user.plan)}">${escapeHtml(user.plan)}</span></p>
 </div>
+<p>Saved note (localStorage): <span id="account-note"></span></p>
+<script>document.getElementById('account-note').textContent = localStorage.getItem('demo_note') || '';</script>
 <p><a href="/">Home</a></p>`,
     ),
   );
 });
+
+/** UI pages accept the session cookie or an `Authorization: Bearer <sessionToken>` header. */
+function uiSessionEmail(req) {
+  return sessionEmailFromCookie(req) || authEmail(req);
+}
 
 function sessionEmailFromCookie(req) {
   const raw = req.headers.cookie || '';

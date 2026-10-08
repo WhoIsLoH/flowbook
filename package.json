@@ -1,6 +1,6 @@
 {
   "name": "flowbook-cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Versioned business-flow playbooks for web apps (HTTP + Playwright browser steps)",
   "type": "module",
   "bin": {
@@ -12,6 +12,7 @@
     "examples/demo-app/server.js",
     "examples/demo-app/package.json",
     "LICENSE",
+    "CHANGELOG.md",
     "README.md"
   ],
   "scripts": {
@@ -21,7 +22,10 @@
     "validate:browser": "node src/cli.js validate playbooks/auth-signup-checkout-browser.yaml",
     "flowbook:http": "node src/cli.js run playbooks/auth-signup-checkout.yaml",
     "flowbook:browser": "node src/cli.js run playbooks/auth-signup-checkout-browser.yaml",
-    "prepublishOnly": "npm run validate && npm run validate:browser",
+    "flowbook:session": "node src/cli.js run playbooks/api-signup-browser-checkout.yaml",
+    "flowbook:session-headers": "node src/cli.js run playbooks/api-signup-browser-headers.yaml",
+    "validate:all": "node src/cli.js validate playbooks/auth-signup-checkout.yaml playbooks/auth-signup-checkout-browser.yaml playbooks/api-signup-browser-checkout.yaml playbooks/api-signup-browser-headers.yaml",
+    "prepublishOnly": "npm run validate:all",
     "pack:check": "npm pack --dry-run"
   },
   "keywords": [

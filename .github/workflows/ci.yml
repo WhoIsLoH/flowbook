@@ -31,9 +31,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Validate playbooks
-        run: |
-          npm run validate
-          npm run validate:browser
+        run: npm run validate:all
 
       - name: Start demo-app
         run: |
@@ -55,5 +53,15 @@ jobs:
 
       - name: Run browser playbook
         run: npm run flowbook:browser
+        env:
+          BASE_URL: http://127.0.0.1:3847
+
+      - name: Run API to browser playbook (session cookie)
+        run: npm run flowbook:session
+        env:
+          BASE_URL: http://127.0.0.1:3847
+
+      - name: Run API to browser playbook (session headers + localStorage)
+        run: npm run flowbook:session-headers
         env:
           BASE_URL: http://127.0.0.1:3847

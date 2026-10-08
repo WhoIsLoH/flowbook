@@ -1,6 +1,6 @@
 import { runHttpStep } from './steps/http.js';
 import { runAssertStep } from './steps/assert.js';
-import { runBrowserStep, closeBrowser } from './steps/browser.js';
+import { runBrowserStep, closeBrowser, validateSession } from './steps/browser.js';
 
 const BUILTINS = {
   TIMESTAMP: () => String(Date.now()),
@@ -44,6 +44,13 @@ export function validatePlaybook(doc) {
         if (!Array.isArray(step.actions) || step.actions.length === 0) {
           issues.push(`steps[${i}] (id=${step.id}) browser missing non-empty actions`);
         }
+        if (step.session != null) {
+          for (const issue of validateSession(step.session)) {
+            issues.push(`steps[${i}] (id=${step.id}) ${issue}`);
+          }
+        }
+      } else if (step.session != null) {
+        issues.push(`steps[${i}] (id=${step.id}) session is only supported on browser steps`);
       }
     });
   }
@@ -140,6 +147,7 @@ export async function runPlaybook(doc, options = {}) {
     browser: null,
     context: null,
     page: null,
+    sessionHeaders: null,
   };
   const stepResults = [];
   let passed = 0;

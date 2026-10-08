@@ -2,15 +2,17 @@
 import { Command } from 'commander';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { createRequire } from 'node:module';
 import { parse } from 'yaml';
 import { runPlaybook, validatePlaybook } from './runner.js';
 
+const { version } = createRequire(import.meta.url)('../package.json');
 const program = new Command();
 
 program
   .name('flowbook')
   .description('Versioned business-flow playbooks for web apps')
-  .version('0.1.0');
+  .version(version);
 
 program
   .command('run')
@@ -36,27 +38,30 @@ program
 
 program
   .command('validate')
-  .argument('<file>', 'Path to a Flowbook YAML playbook')
-  .description('Validate playbook structure without executing HTTP steps')
-  .action(async (filePath) => {
-    try {
-      const abs = resolve(filePath);
-      const raw = await readFile(abs, 'utf8');
-      const doc = parse(raw);
-      const issues = validatePlaybook(doc);
-      if (issues.length === 0) {
-        console.log(`✓ Valid playbook: ${doc.name || abs}`);
-        console.log(`  steps: ${(doc.steps || []).length}`);
-        process.exitCode = 0;
-      } else {
-        console.error(`✗ Invalid playbook (${issues.length} issue(s)):`);
-        for (const issue of issues) console.error(`  - ${issue}`);
-        process.exitCode = 1;
+  .argument('<files...>', 'One or more Flowbook YAML playbooks')
+  .description('Validate playbook structure without executing steps')
+  .action(async (filePaths) => {
+    let failed = false;
+    for (const filePath of filePaths) {
+      try {
+        const abs = resolve(filePath);
+        const raw = await readFile(abs, 'utf8');
+        const doc = parse(raw);
+        const issues = validatePlaybook(doc);
+        if (issues.length === 0) {
+          console.log(`✓ Valid playbook: ${doc.name || abs}`);
+          console.log(`  steps: ${(doc.steps || []).length}`);
+        } else {
+          failed = true;
+          console.error(`✗ Invalid playbook ${filePath} (${issues.length} issue(s)):`);
+          for (const issue of issues) console.error(`  - ${issue}`);
+        }
+      } catch (err) {
+        failed = true;
+        console.error(`\n✗ Fatal (${filePath}): ${err.message}`);
       }
-    } catch (err) {
-      console.error(`\n✗ Fatal: ${err.message}`);
-      process.exitCode = 1;
     }
+    process.exitCode = failed ? 1 : 0;
   });
 
 function printReport(result) {

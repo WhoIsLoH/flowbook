@@ -51,7 +51,7 @@ In another terminal:
 
 ```bash
 # validate playbook shape
-npm run validate
+npm run validate:all
 # or: npx flowbook validate playbooks/auth-signup-checkout.yaml
 
 # run the HTTP journey against the local demo
@@ -62,6 +62,10 @@ npm run flowbook:browser
 
 # watch the browser (headed)
 FLOWBOOK_HEADED=1 npm run flowbook:browser
+
+# sign up over the API, then check out in the browser already logged in
+npm run flowbook:session
+npm run flowbook:session-headers
 ```
 
 Override the target:
@@ -124,7 +128,7 @@ steps:
 |------|------|
 | `http` | Request (`method`, `path`, optional `headers` / `body` / `expect.status` / `capture`) |
 | `assert` | Check `expect.status` / `expect.json` / `expect.equals` against last response (or nested `http:`), or `expect.vars` against captured playbook vars |
-| `browser` | Drive a Chromium UI with Playwright (`actions`: `goto` / `fill` / `click` / `waitFor` / `capture`) |
+| `browser` | Drive a Chromium UI with Playwright (`actions`: `goto` / `fill` / `click` / `waitFor` / `capture`; optional `session` to start logged in) |
 
 ---
 
@@ -166,6 +170,50 @@ steps:
 
 Browser contexts are reused across consecutive `browser` steps in one run, then closed.
 
+### Starting logged in: `session`
+
+**FR** — Un step `browser` peut démarrer avec une session déjà authentifiée, à partir d’un token capturé par un step `http` (cookie, en-tête, localStorage). Pas besoin de repasser par le formulaire de login.
+
+**EN** — A `browser` step can start with an authenticated session built from vars captured by earlier `http` steps, so the UI opens already logged in.
+
+```yaml
+- id: signup
+  type: http
+  method: POST
+  path: /signup
+  body: { email: ${email}, password: ${password} }
+  capture:
+    sessionToken: $.sessionToken
+
+- id: checkout
+  type: browser
+  session:
+    cookies:
+      - name: session
+        value: ${sessionToken}      # url defaults to baseUrl
+    headers:
+      Authorization: Bearer ${sessionToken}
+    localStorage:
+      authToken: ${sessionToken}
+  actions:
+    - goto: /checkout
+```
+
+| Key | What it does |
+|-----|--------------|
+| `cookies` | List of `{ name, value, url?, domain?, path?, expires?, httpOnly?, secure?, sameSite? }`. Without `url` or `domain`, the cookie is set for `baseUrl`. |
+| `headers` | Extra request headers, sent only to requests on the `baseUrl` origin (not to CDNs or third parties). A `null` or empty value removes a header set by an earlier step. |
+| `localStorage` | Key/value pairs written for the `baseUrl` origin before the page’s own scripts run on the next navigation (once per tab, so the app can still change or clear them). |
+
+Notes:
+
+- The session is applied to the shared browser context before the step’s actions run, and stays there for later `browser` steps in the same run. Cookies and headers from a later step are added on top (same name overwrites).
+- Cookies follow normal browser rules: they are scoped by host, not port, so a cookie for `127.0.0.1:3847` is also sent to other ports on `127.0.0.1`.
+- A cookie whose value resolves to an empty string fails the step, which usually means the var was never captured.
+- `localStorage` takes effect on the next `goto`. If the page is already on the `baseUrl` origin, it is also written right away, but the page will not re-render by itself.
+
+See `playbooks/api-signup-browser-checkout.yaml` (cookie) and `playbooks/api-signup-browser-headers.yaml` (header + localStorage).
+
 ---
 
 ## Layout
@@ -179,6 +227,8 @@ flowbook/
   src/steps/browser.js    # Playwright UI steps
   playbooks/auth-signup-checkout.yaml
   playbooks/auth-signup-checkout-browser.yaml
+  playbooks/api-signup-browser-checkout.yaml   # API signup → browser checkout (session cookie)
+  playbooks/api-signup-browser-headers.yaml    # same, with Authorization header + localStorage
   examples/demo-app/      # Express stub on :3847 (API + HTML UI)
 ```
 
@@ -201,9 +251,9 @@ flowbook/
 | `POST /ui/signup` | Creates user, shows verify token |
 | `GET /verify` | Token form |
 | `POST /ui/verify` | Verifies → redirect `/checkout` |
-| `GET /checkout` | Mock pay button (session cookie) |
+| `GET /checkout` | Mock pay button (session cookie or `Authorization: Bearer <sessionToken>`) |
 | `POST /ui/checkout` | Sets `plan: premium` → `/account` |
-| `GET /account` | Shows email / verified / plan |
+| `GET /account` | Shows email / verified / plan, plus `localStorage.demo_note` if set |
 
 In-memory only — no database, no real Stripe keys.
 
